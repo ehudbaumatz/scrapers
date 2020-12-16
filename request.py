@@ -7,7 +7,7 @@ def get_proxy_service_url():
     return os.environ.get('PROXY_SERVICE')
 
 def proxy_request(url):
-    return get_request(url, {'https': get_proxy_service_url()})
+    return get_request(url, {'https': get_proxy_service_url(), 'http':get_proxy_service_url()})
 
 def get_request(url, proxies=None):
 
@@ -26,7 +26,7 @@ def get_request(url, proxies=None):
     user_agent = ua.random
     headers_get["User-Agent"] = user_agent
 
-    s = requests.Session()
-    return s.get(url, headers=headers_get, proxies=proxies)
 
+    rsp = requests.get(url, verify=False, headers=headers_get, proxies=proxies)
+    return rsp
 
