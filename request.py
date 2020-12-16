@@ -1,10 +1,10 @@
 import requests
 import fake_useragent
-from pathlib import Path
+import os
 
-def get_proxy_service_url(path='~/.ssh/scraper_api.txt'):
-    path = Path(path).expanduser()
-    return path.read_text()
+def get_proxy_service_url():
+
+    return os.environ.get('PROXY_SERVICE')
 
 def proxy_request(url):
     return get_request(url, {'https': get_proxy_service_url()})
