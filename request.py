@@ -26,7 +26,7 @@ def get_headers():
 
 def proxy_request(url):
     client = ScraperAPIClient(get_proxy_api_key())
-    rsp = client.get(url=url, headers=get_headers())
+    rsp = client.get(url=url)
     return rsp
 
 def get_request(url):
