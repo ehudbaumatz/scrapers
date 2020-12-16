@@ -18,7 +18,7 @@ class Spider(ABC):
         self.get = request_method
 
     @cachier()
-    def query(self, queries: FrozenSet[str], show_progress: bool=True):
+    def query(self, queries: FrozenSet[str], hide_progress_bar: bool=False):
         raise Exception('Not Implemented')
 
     def get_name(self):
@@ -30,10 +30,10 @@ class GoogleWebSpider(Spider):
         super().__init__(name, request_method)
 
     @cachier()
-    def query(self, queries: FrozenSet[str], show_progress: bool=True):
+    def query(self, queries: FrozenSet[str], hide_progress_bar: bool=False):
 
         results = []
-        for q in tqdm(queries, disable=~show_progress):
+        for q in tqdm(queries, disable=hide_progress_bar):
             try:
                 rsp = self.get(q)
                 results.extend([q, u] for u in self.parse(rsp.text))
@@ -52,10 +52,10 @@ class FeedspotSpider(Spider):
         super().__init__(name, request_method)
 
     @cachier()
-    def query(self, queries: FrozenSet[str], show_progress: bool=True):
+    def query(self, queries: FrozenSet[str], hide_progress_bar: bool=False):
 
         results = []
-        for q in tqdm(queries, disable=~show_progress):
+        for q in tqdm(queries, disable=hide_progress_bar):
             try:
                 results.extend([q, rsp] for rsp in self.parse(self.get(q).text))
             except Exception as ex:
@@ -79,10 +79,10 @@ class WaybackSpider(Spider):
         self.pattern = re.compile(':80|/amp/')
 
     @cachier()
-    def query(self, queries: FrozenSet[str], show_progress: bool=True):
+    def query(self, queries: FrozenSet[str], hide_progress_bar: bool=False):
 
         results = []
-        for q in tqdm(queries, disable=~show_progress):
+        for q in tqdm(queries, disable=hide_progress_bar):
             try:
 
                 n_pages = int(self.get(self.page_num.format(q)).text.strip())
