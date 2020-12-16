@@ -7,6 +7,7 @@ from request import proxy_request, get_request
 from lxml import html
 from cachier import cachier
 import re
+from tqdm.notebook import tqdm
 
 class Spider(ABC):
 
@@ -17,7 +18,7 @@ class Spider(ABC):
         self.get = request_method
 
     @cachier()
-    def query(self, queries: FrozenSet[str]):
+    def query(self, queries: FrozenSet[str], show_progress: bool=True):
         raise Exception('Not Implemented')
 
     def get_name(self):
@@ -29,10 +30,10 @@ class GoogleWebSpider(Spider):
         super().__init__(name, request_method)
 
     @cachier()
-    def query(self, queries: FrozenSet[str]):
+    def query(self, queries: FrozenSet[str], show_progress: bool=True):
 
         results = []
-        for q in queries:
+        for q in tqdm(queries, disable=~show_progress):
             try:
                 rsp = self.get(q)
                 results.extend([q, u] for u in self.parse(rsp.text))
@@ -51,10 +52,10 @@ class FeedspotSpider(Spider):
         super().__init__(name, request_method)
 
     @cachier()
-    def query(self, queries: FrozenSet[str]):
+    def query(self, queries: FrozenSet[str], show_progress: bool=True):
 
         results = []
-        for q in queries:
+        for q in tqdm(queries, disable=~show_progress):
             try:
                 results.extend([q, rsp] for rsp in self.parse(self.get(q).text))
             except Exception as ex:
@@ -78,10 +79,10 @@ class WaybackSpider(Spider):
         self.pattern = re.compile(':80|/amp/')
 
     @cachier()
-    def query(self, queries: FrozenSet[str]):
+    def query(self, queries: FrozenSet[str], show_progress: bool=True):
 
         results = []
-        for q in queries:
+        for q in tqdm(queries, disable=~show_progress):
             try:
 
                 n_pages = int(self.get(self.page_num.format(q)).text.strip())
@@ -110,28 +111,28 @@ class WaybackSpider(Spider):
                 self.logger.error(ex)
         return results
 
-
-if __name__ == '__main__':
-    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=log_fmt)
-
-    # not used in this stub but often useful for finding various files
-    # project_dir = Path(__file__).resolve().parents[2]
-    # import os
-    # os.environ['PROXY_SERVICE'] = 'http://scraperapi:e16acd19f0bfd74cfeb9202d0092ad42@proxy-server.scraperapi.com:8001'
-    # spider = FeedspotSpider()
-    # spider.query(frozenset(['https://blog.feedspot.com/womens_magazines/']))
-
-
-    # cosmo_paper = newspaper.build('https://www.cosmopolitan.com/', memoize_articles=False)
-    # categories= cosmo_paper.categories_to_articles()
-    #
-    # # for article in cosmo_paper.articles:
-    # #      print(article.url)
-    #
-    # for category in cosmo_paper.category_urls():
-    #     print(category)
-    # cosmo_paper.categories_to_articles()
+#
+# if __name__ == '__main__':
+#     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+#     logging.basicConfig(level=logging.INFO, format=log_fmt)
+#
+#     # not used in this stub but often useful for finding various files
+#     # project_dir = Path(__file__).resolve().parents[2]
+#     # import os
+#     # os.environ['PROXY_SERVICE'] = 'http://scraperapi:e16acd19f0bfd74cfeb9202d0092ad42@proxy-server.scraperapi.com:8001'
+#     # spider = FeedspotSpider()
+#     # spider.query(frozenset(['https://blog.feedspot.com/womens_magazines/']))
+#
+#
+#     # cosmo_paper = newspaper.build('https://www.cosmopolitan.com/', memoize_articles=False)
+#     # categories= cosmo_paper.categories_to_articles()
+#     #
+#     # # for article in cosmo_paper.articles:
+#     # #      print(article.url)
+#     #
+#     # for category in cosmo_paper.category_urls():
+#     #     print(category)
+#     # cosmo_paper.categories_to_articles()
 
 
 
