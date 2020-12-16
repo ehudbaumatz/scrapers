@@ -6,6 +6,7 @@ from abc import ABC
 from request import proxy_request, get_request
 from lxml import html
 from cachier import cachier
+import re
 
 class Spider(ABC):
 
@@ -24,8 +25,8 @@ class Spider(ABC):
 
 class GoogleWebSpider(Spider):
 
-    def __init__(self):
-        super().__init__('google', proxy_request)
+    def __init__(self, name='google', request_method=proxy_request):
+        super().__init__(name, request_method)
 
     @cachier()
     def query(self, queries: List[str]):
@@ -33,7 +34,7 @@ class GoogleWebSpider(Spider):
         results = []
         for q in queries:
             try:
-                rsp = self.parse(get(q))
+                rsp = self.parse(self.get(q).text)
                 results.append([q, rsp])
             except Exception as ex:
                 self.logger.error(ex)
@@ -45,9 +46,9 @@ class GoogleWebSpider(Spider):
 
 class FeedspotSpider(Spider):
 
-    def __init__(self):
+    def __init__(self, name='feedspot', request_method=get_request):
 
-        super().__init__('feedspot', get_request)
+        super().__init__(name, request_method)
 
     @cachier()
     def query(self, queries: List[str]):
@@ -55,7 +56,7 @@ class FeedspotSpider(Spider):
         results = []
         for q in queries:
             try:
-                rsp = self.parse(self.get(q))
+                rsp = self.parse(self.get(q).text)
                 results.append([q, rsp])
             except Exception as ex:
                 self.logger.error(ex)
@@ -64,6 +65,52 @@ class FeedspotSpider(Spider):
     def parse(self, text:str):
         doc = html.fromstring(text.encode('utf-8'))
         return [a.get('href') for a in doc.xpath('a.ext')]
+
+
+class WaybackSpider(Spider):
+
+    def __init__(self, name='wayback', request_method=proxy_request):
+        super().__init__(name, request_method)
+
+        self.template = 'http://web.archive.org/web/{0}/{1}'
+        self.page = 'http://web.archive.org/cdx/search/cdx?url={}&collapse=original&filter=statuscode:200&filter=mimetype:text/html&page={}'
+        self.page_num = 'http://web.archive.org/cdx/search/cdx?url={domain}&collapse=original&filter=statuscode:200&filter=mimetype:text/html&showNumPages=true'
+        columns = ["urlkey", "timestamp", "original", "mimetype", "statuscode", "digest", "length"]
+        self.field_count = len(columns)
+        self.pattern = re.compile(':80|/amp/')
+
+    @cachier()
+    def query(self, queries: List[str]):
+
+        results = []
+        for q in queries:
+            try:
+
+                n_pages = int(self.get(self.page_num.format(q)).text.strip())
+                rsp = self._get_pages(q, n_pages)
+                results.append([q, rsp])
+            except Exception as ex:
+                self.logger.error(ex)
+        return results
+
+    def parse(self, text: str):
+
+        for line in text.split('\n'):
+            fields = line.split(' ')
+            if len(fields) == self.field_count and len(re.findall(self.pattern, fields[2])) == 0:
+                yield f'http://web.archive.org/web/{fields[1]}/{fields[2]}'
+
+    def _get_pages(self, domain, n_pages):
+
+        results = []
+        for i in range(n_pages):
+            try:
+                for u in self.parse(self.get(self.page.format(domain, i))):
+                    results.extend(u)
+
+            except Exception as ex:
+                self.logger.error(ex)
+        return results
 
 import newspaper
 if __name__ == '__main__':
