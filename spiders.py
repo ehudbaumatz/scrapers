@@ -119,7 +119,7 @@ class WaybackSpider(Spider):
 #     # not used in this stub but often useful for finding various files
 #     # project_dir = Path(__file__).resolve().parents[2]
 #     # import os
-#     # os.environ['PROXY_SERVICE'] = 'http://scraperapi:e16acd19f0bfd74cfeb9202d0092ad42@proxy-server.scraperapi.com:8001'
+#
 #     # spider = FeedspotSpider()
 #     # spider.query(frozenset(['https://blog.feedspot.com/womens_magazines/']))
 #
