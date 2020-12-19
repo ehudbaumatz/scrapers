@@ -35,11 +35,11 @@ class WebSite(object):
         self.paper.categories = [c for c in self.paper.categories if
                                  len(c.url) > len(self.site) and language(c).lower() == 'en']
 
-    def dump(self, path):
+    def dump(self, path, mode='a+'):
 
         self.paper.download_articles(threads=4)
         self.paper.parse_articles()
-        writer = csv.writer(open(path))
+        writer = csv.writer(open(path, mode=mode))
         writer.writerow(['url', 'source_url', 'title', 'section', 'opinion', 'keywords', 'tags'])
         for a in self.paper.articles:
             try:
