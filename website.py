@@ -40,14 +40,14 @@ class WebSite(object):
         self.paper.download_articles(threads=4)
         self.paper.parse_articles()
         writer = csv.writer(open(path))
-        writer.write_row(['url', 'source_url', 'title', 'section', 'opinion', 'keywords', 'tags'])
+        writer.writerow(['url', 'source_url', 'title', 'section', 'opinion', 'keywords', 'tags'])
         for a in self.paper.articles:
             try:
                 section = a.meta_data['article']['section'] if 'article' in a.meta_data and 'section' in \
                                                                      a.meta_data['article'] else None
                 opinion = a.meta_data['article']['section'] if 'article' in a.meta_data and 'section' in \
                                                                      a.meta_data['article'] else None
-                writer.write_row([a.url, a.source_url, a.title, section, opinion, '|'.join(a.meta_keywords),
+                writer.writerow([a.url, a.source_url, a.title, section, opinion, '|'.join(a.meta_keywords),
                                   '|'.join(a.tags)])
             except Exception as ex:
                 print(ex)

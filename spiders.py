@@ -1,13 +1,15 @@
-
 import logging
-from typing import FrozenSet
+from datetime import datetime
+from typing import FrozenSet, List
 from abc import ABC
 
-from request import proxy_request, get_request
+from browser import Browser
+from request import proxy_request, get_request, get_proxy_api_key
 from lxml import html
 from cachier import cachier
 import re
-from tqdm.notebook import tqdm
+from tqdm import tqdm
+
 
 class Spider(ABC):
 
@@ -17,12 +19,13 @@ class Spider(ABC):
         self.logger.setLevel(logging.INFO)
         self.get = request_method
 
-    @cachier()
-    def query(self, queries: FrozenSet[str], hide_progress_bar: bool=False):
+    @cachier(cache_dir='cache')
+    def query(self, queries: FrozenSet[str], hide_progress_bar: bool = False):
         raise Exception('Not Implemented')
 
     def get_name(self):
         return self.name
+
 
 class GoogleWebSpider(Spider):
 
@@ -30,7 +33,7 @@ class GoogleWebSpider(Spider):
         super().__init__(name, request_method)
 
     @cachier()
-    def query(self, queries: FrozenSet[str], hide_progress_bar: bool=False):
+    def query(self, queries: FrozenSet[str], hide_progress_bar: bool = False):
 
         results = []
         for q in tqdm(queries, disable=hide_progress_bar):
@@ -41,9 +44,12 @@ class GoogleWebSpider(Spider):
                 self.logger.error(ex)
         return results
 
-    def parse(self, text:str):
+    @staticmethod
+    def parse(text: str):
         doc = html.fromstring(text.encode('utf-8'))
-        return [a.get('href') for a in doc.cssselect('a') if 'href' in a.attrib and a.get('href').startswith('http') and 'google' not in a.get('href')]
+        return [a.get('href') for a in doc.cssselect('a') if
+                'href' in a.attrib and a.get('href').startswith('http') and 'google' not in a.get('href')]
+
 
 class FeedspotSpider(Spider):
 
@@ -52,7 +58,7 @@ class FeedspotSpider(Spider):
         super().__init__(name, request_method)
 
     @cachier()
-    def query(self, queries: FrozenSet[str], hide_progress_bar: bool=False):
+    def query(self, queries: FrozenSet[str], hide_progress_bar: bool = False):
 
         results = []
         for q in tqdm(queries, disable=hide_progress_bar):
@@ -62,9 +68,10 @@ class FeedspotSpider(Spider):
                 self.logger.error(ex)
         return results
 
-    def parse(self, text:str):
+    def parse(self, text: str):
         doc = html.fromstring(text.encode('utf-8'))
         return [a.get('href') for a in doc.cssselect('a.ext')]
+
 
 class WaybackSpider(Spider):
 
@@ -79,7 +86,7 @@ class WaybackSpider(Spider):
         self.pattern = re.compile(':80|/amp/')
 
     @cachier()
-    def query(self, queries: FrozenSet[str], hide_progress_bar: bool=False):
+    def query(self, queries: FrozenSet[str], hide_progress_bar: bool = False):
 
         results = []
         for q in tqdm(queries, disable=hide_progress_bar):
@@ -111,29 +118,125 @@ class WaybackSpider(Spider):
                 self.logger.error(ex)
         return results
 
-#
-# if __name__ == '__main__':
-#     log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-#     logging.basicConfig(level=logging.INFO, format=log_fmt)
-#
-#     # not used in this stub but often useful for finding various files
-#     # project_dir = Path(__file__).resolve().parents[2]
-#     # import os
-#
-#     # spider = FeedspotSpider()
-#     # spider.query(frozenset(['https://blog.feedspot.com/womens_magazines/']))
-#
-#
-#     # cosmo_paper = newspaper.build('https://www.cosmopolitan.com/', memoize_articles=False)
-#     # categories= cosmo_paper.categories_to_articles()
-#     #
-#     # # for article in cosmo_paper.articles:
-#     # #      print(article.url)
-#     #
-#     # for category in cosmo_paper.category_urls():
-#     #     print(category)
-#     # cosmo_paper.categories_to_articles()
+
+class BrowserSpider(ABC):
+
+    def __init__(self, name, executable_path: str = 'chromedriver', proxy: str = None):
+        self.browser = Browser(executable_path, proxy)
+        self.name = name
+        self.logger = logging.getLogger(name)
+        self.logger.setLevel(logging.INFO)
+
+    @cachier(cache_dir='cache')
+    def query(self, queries: FrozenSet[str], hide_progress_bar: bool = False):
+        raise Exception('Not Implemented')
+
+    def get_name(self):
+        return self.name
 
 
+class GoogleImageSpider(BrowserSpider):
+
+    def __init__(self, proxy: str, executable_path: str = './chromedriver', path:str =None):
+
+        super().__init__('google_image_spider', executable_path, proxy)
+        self.pattern = re.compile(r'(?:http\:|https\:)?\/\/.*\.(?:png|jpg)')
+        self.pattern2 = re.compile(r'\<|\>')
+        self.template = 'https://www.google.com/search?q={}&tbm=isch&hl=en&chips=q:{},online_chips:{}'
+        self.button_css = 'input[type="button"]'
+        self.visited = set()
+        self.tbnids = list()
+        self.path = f'images_batch_{datetime.now()}.txt' if path is None else path
+        self.image_count = 0
+        self.total_image_count = 0
+
+    @cachier(cache_dir='cache')
+    def query(self, queries: FrozenSet[str], hide_progress_bar: bool = False):
+
+        urls = list(queries)
+        pbar = tqdm(desc=f'starting main loop on {len(urls)} urls')
+        while len(urls) > 0:
+            pbar.update()
+
+            url = urls.pop()
+            self.browser.browse(url)
+            sh = self.browser.get_scroll_height() # should be zero
+            clicked = False
+
+            while True:
+                self.parse()
+
+                csh = self.browser.scroll_down()
+                if csh == sh and not clicked:
+                    self.browser.click(self.button_css)
+                    clicked=True
+                elif csh != sh:
+                    sh = csh
+                else:
+                    break
+
+            for related in self.click_related_images(url):
+                urls.extend(related)
+
+            pbar.set_description(f'colleted {self.image_count} images on page, total images collected: {self.total_image_count}')
+
+    def click_related_images(self, url:str):
+        related = []
+        pbar = tqdm(desc=f'starting looping data ids')
+        while len(self.tbnids):
+            pbar.update()
+            data_id = self.tbnids
+            self.visited.add(data_id)
+            self.browser.browse(f'{url}#imgrc={data_id}')
+            if '#imgrc' not in self.browser.driver.current_url:
+                continue
+
+            _,_, doc = self.parse()
+            related.extend([f'https://www.google.com/{a.get("href")}' for a in doc.cssselect('a') if
+                   'aria-label' in a.attrib and 'Related imges' in a.get('aria-label')])
+        return related
+
+    def _get_data_ids(self, doc):
+        ids = []
+        for div in doc.cssselect('div'):
+            atrib = div.attrib
+            if 'jsaction' in atrib and 'data-tbnid' in atrib and atrib['data-tbnid'] not in self.visited:
+                ids.append(atrib['data-tbnid'])
+        return ids
+
+    def _get_images(self, text):
+        return [img for img in re.findall(self.pattern, text) if
+                  (len(re.findall(self.pattern2, img)) == 0) and img.startswith('http') and img not in self.visited]
+
+    def parse(self):
+        text = self.browser.driver.page_source.encode('utf-8').decode('utf-8')
+        doc = html.fromstring(text)
+        ids = self._get_data_ids(doc)
+        images = self._get_images(text)
+
+        self.tbnids.extend(ids)
+        self._write(images)
+        return ids, images, doc
+
+    def _write(self, data:List[str]):
+
+        ix = 0
+        with open(self.path, 'a+') as f:
+            for ix, item in enumerate(data):
+                self.visited.add(item)
+                f.write(f'{item}\n')
+        self.image_count += ix
+
+super_proxy_url = 'http://scraperapi:e16acd19f0bfd74cfeb9202d0092ad42@proxy-server.scraperapi.com:8001'
+template = 'https://www.google.com/search?q=jewelry+image+retouching+before+after&tbm=isch&hl=en&chips=q:jewelry+image+retouching+before+after,online_chips:{}&sa=X&ved=2ahUKEwijrayPs9jtAhVH0oUKHT_SD_sQ4lYoBXoECAEQHg&biw=1527&bih=833#imgrc=KDzdDfsF8aj-nM'
+queries = frozenset([template.format(item) for item in ['ring', 'diamond', 'gold', 'professional+jewelry', 'necklace', 'earrings', 'charm+bracelet', 'silver', 'clipping+path', 'photo+retouching+service', 'retouching+service']])
+
+
+
+
+
+
+spider = GoogleImageSpider(super_proxy_url)
+spider.query(queries)
 
 
