@@ -227,16 +227,6 @@ class GoogleImageSpider(BrowserSpider):
                 f.write(f'{item}\n')
         self.image_count += ix
 
-super_proxy_url = 'http://scraperapi:e16acd19f0bfd74cfeb9202d0092ad42@proxy-server.scraperapi.com:8001'
-template = 'https://www.google.com/search?q=jewelry+image+retouching+before+after&tbm=isch&hl=en&chips=q:jewelry+image+retouching+before+after,online_chips:{}&sa=X&ved=2ahUKEwijrayPs9jtAhVH0oUKHT_SD_sQ4lYoBXoECAEQHg&biw=1527&bih=833#imgrc=KDzdDfsF8aj-nM'
-queries = frozenset([template.format(item) for item in ['ring', 'diamond', 'gold', 'professional+jewelry', 'necklace', 'earrings', 'charm+bracelet', 'silver', 'clipping+path', 'photo+retouching+service', 'retouching+service']])
 
-
-
-
-
-
-spider = GoogleImageSpider(super_proxy_url)
-spider.query(queries)
 
 
