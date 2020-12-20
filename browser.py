@@ -78,7 +78,6 @@ class Browser(object):
                 break
             sh = csh
 
-# proxy_url = 'http://scraperapi:e16acd19f0bfd74cfeb9202d0092ad42@proxy-server.scraperapi.com:8001'
 # service = webdriver.chrome.service.Service(executable_path='./chromedriver')
 # service.start()
 # options = webdriver.ChromeOptions()
