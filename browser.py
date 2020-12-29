@@ -16,67 +16,65 @@ from selenium.webdriver.support.wait import WebDriverWait
 from tqdm import tqdm
 
 
-class Browser(object):
+def browse(driver: webdriver, url: str):
+    driver.get(url)
+    wait_page_load(driver)
 
-    def __init__(self, executable_path: str = 'chromedriver', proxy: str = None):
 
-        service = webdriver.chrome.service.Service(executable_path=executable_path)
-        service.start()
-        options = webdriver.ChromeOptions()
-        options.add_argument("window-size=1920,1080")
-        options = options.to_capabilities()
-        proxy = self._get_proxy(proxy) if proxy is not None else None
-        self.driver = webdriver.Remote(service.service_url, options, proxy=proxy)
+def click(driver: webdriver, css: str):
+    try:
+        element = WebDriverWait(driver, 10, poll_frequency=1).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, css)))
+        element.click()
+        wait_page_load(driver)
+    except Exception as ex:
+        print(ex)
 
-    @staticmethod
-    def _get_proxy(proxy_url: str):
 
-        proxy = Proxy({
-            'proxyType': ProxyType.MANUAL,
-            'httpProxy': proxy_url,
-            'ftpProxy': proxy_url,
-            'sslProxy': proxy_url,
-            'noProxy': 'localhost'  # set this value as desired
-        })
-        return proxy
+def get_scroll_height(driver: webdriver):
+    return driver.execute_script(
+        "var lenOfPage=document.body.scrollHeight;return lenOfPage;")
 
-    def _wait_page_load(self):
-        # wait on load page complete
-        wait = WebDriverWait(self.driver, 10, poll_frequency=1)
-        wait.until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
 
-    def browse(self, url: str):
-        self.driver.get(url)
-        self._wait_page_load()
+def scroll_down(driver: webdriver, wait: bool = True):
+    sh = driver.execute_script(
+        "window.scrollTo(0, document.body.scrollHeight);var lenOfPage=document.body.scrollHeight;return lenOfPage;")
+    if wait:
+        wait_page_load(driver)
+    return sh
 
-    def click(self, css: str):
-        try:
-            element = WebDriverWait(self.driver, 10, poll_frequency=1).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, css)))
-            element.click()
-            self._wait_page_load()
-        except Exception as ex:
-            print(ex)
 
-    def get_scroll_height(self):
-        return self.driver.execute_script(
-            "var lenOfPage=document.body.scrollHeight;return lenOfPage;")
+def scroll_to_bottom(driver: webdriver):
+    sh = scroll_down(driver)
+    while True:
+        csh = scroll_down(driver)
+        if csh == sh:
+            break
+        sh = csh
 
-    def scroll_down(self, wait:bool=True):
-        sh = self.driver.execute_script(
-            "window.scrollTo(0, document.body.scrollHeight);var lenOfPage=document.body.scrollHeight;return lenOfPage;")
-        if wait:
-            self._wait_page_load()
-        return sh
 
-    def scroll_to_bottom(self):
+def wait_page_load(driver):
+    # wait on load page complete
+    wait = WebDriverWait(driver, 10, poll_frequency=1)
+    wait.until(lambda x: x.execute_script('return document.readyState') == 'complete')
 
-        sh = self.scroll_down()
-        while True:
-            csh = self.scroll_down()
-            if csh == sh:
-                break
-            sh = csh
+
+def get_proxy(proxy_url: str):
+
+    proxy = Proxy({
+        'proxyType': ProxyType.MANUAL,
+        'httpProxy': proxy_url,
+        'ftpProxy': proxy_url,
+        'sslProxy': proxy_url,
+        'noProxy': 'localhost'  # set this value as desired
+    })
+    return proxy
+
+
+
+
+
+
 
 # service = webdriver.chrome.service.Service(executable_path='./chromedriver')
 # service.start()

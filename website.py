@@ -45,9 +45,10 @@ class WebSite(object):
             try:
                 section = a.meta_data['article']['section'] if 'article' in a.meta_data and 'section' in \
                                                                      a.meta_data['article'] else None
-                opinion = a.meta_data['article']['section'] if 'article' in a.meta_data and 'section' in \
+                opinion = a.meta_data['article']['opinion'] if 'article' in a.meta_data and 'opinion' in \
                                                                      a.meta_data['article'] else None
                 writer.writerow([a.url, a.source_url, a.title, section, opinion, '|'.join(a.meta_keywords),
                                   '|'.join(a.tags)])
             except Exception as ex:
                 print(ex)
+

@@ -4,12 +4,12 @@ from scraper_api import ScraperAPIClient
 
 
 def get_proxy_api_key():
-    return os.environ.get('proxy_api_key')
+    return os.environ.get('PROXY_API_KEY')
 
 
 def proxy_request(url):
-    client = ScraperAPIClient(get_proxy_api_key())
-    rsp = client.get(url=url, timeout=5)
+    client = ScraperAPIClient(os.environ.get('PROXY_API_KEY'))
+    rsp = client.get(url=url)
     return rsp
 
 

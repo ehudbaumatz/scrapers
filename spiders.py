@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import FrozenSet, List
 from abc import ABC
 
-from browser import Browser
+
 from request import proxy_request, get_request, get_proxy_api_key
 from lxml import html
 from cachier import cachier
@@ -118,115 +118,11 @@ class WaybackSpider(Spider):
                 self.logger.error(ex)
         return results
 
-
-class BrowserSpider(ABC):
-
-    def __init__(self, name, executable_path: str = 'chromedriver', proxy: str = None):
-        self.browser = Browser(executable_path, proxy)
-        self.name = name
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.INFO)
-
-    @cachier(cache_dir='cache')
-    def query(self, queries: FrozenSet[str], hide_progress_bar: bool = False):
-        raise Exception('Not Implemented')
-
-    def get_name(self):
-        return self.name
-
-
-class GoogleImageSpider(BrowserSpider):
-
-    def __init__(self, proxy: str, executable_path: str = './chromedriver', path:str =None):
-
-        super().__init__('google_image_spider', executable_path, proxy)
-        self.pattern = re.compile(r'(?:http\:|https\:)?\/\/.*\.(?:png|jpg)')
-        self.pattern2 = re.compile(r'\<|\>')
-        self.template = 'https://www.google.com/search?q={}&tbm=isch&hl=en&chips=q:{},online_chips:{}'
-        self.button_css = 'input[type="button"]'
-        self.visited = set()
-        self.tbnids = list()
-        self.path = f'images_batch_{datetime.now()}.txt' if path is None else path
-        self.image_count = 0
-        self.total_image_count = 0
-
-    @cachier(cache_dir='cache')
-    def query(self, queries: FrozenSet[str], hide_progress_bar: bool = False):
-
-        urls = list(queries)
-        pbar = tqdm(desc=f'starting main loop on {len(urls)} urls')
-        while len(urls) > 0:
-            pbar.update()
-
-            url = urls.pop()
-            self.browser.browse(url)
-            sh = self.browser.get_scroll_height() # should be zero
-            clicked = False
-
-            while True:
-                self.parse()
-
-                csh = self.browser.scroll_down()
-                if csh == sh and not clicked:
-                    self.browser.click(self.button_css)
-                    clicked=True
-                elif csh != sh:
-                    sh = csh
-                else:
-                    break
-
-            for related in self.click_related_images(url):
-                urls.extend(related)
-
-            pbar.set_description(f'colleted {self.image_count} images on page, total images collected: {self.total_image_count}')
-
-    def click_related_images(self, url:str):
-        related = []
-        pbar = tqdm(desc=f'starting looping data ids')
-        while len(self.tbnids):
-            pbar.update()
-            data_id = self.tbnids
-            self.visited.add(data_id)
-            self.browser.browse(f'{url}#imgrc={data_id}')
-            if '#imgrc' not in self.browser.driver.current_url:
-                continue
-
-            _,_, doc = self.parse()
-            related.extend([f'https://www.google.com/{a.get("href")}' for a in doc.cssselect('a') if
-                   'aria-label' in a.attrib and 'Related imges' in a.get('aria-label')])
-        return related
-
-    def _get_data_ids(self, doc):
-        ids = []
-        for div in doc.cssselect('div'):
-            atrib = div.attrib
-            if 'jsaction' in atrib and 'data-tbnid' in atrib and atrib['data-tbnid'] not in self.visited:
-                ids.append(atrib['data-tbnid'])
-        return ids
-
-    def _get_images(self, text):
-        return [img for img in re.findall(self.pattern, text) if
-                  (len(re.findall(self.pattern2, img)) == 0) and img.startswith('http') and img not in self.visited]
-
-    def parse(self):
-        text = self.browser.driver.page_source.encode('utf-8').decode('utf-8')
-        doc = html.fromstring(text)
-        ids = self._get_data_ids(doc)
-        images = self._get_images(text)
-
-        self.tbnids.extend(ids)
-        self._write(images)
-        return ids, images, doc
-
-    def _write(self, data:List[str]):
-
-        ix = 0
-        with open(self.path, 'a+') as f:
-            for ix, item in enumerate(data):
-                self.visited.add(item)
-                f.write(f'{item}\n')
-        self.image_count += ix
-
+def test():
+    spider=GoogleWebSpider()
+    qs = frozenset([f'https://www.google.com/search?q={s} site:https://blog.feedspot.com/' for s in ['Auto Body Styles', 'Commercial Trucks']])
+    spider.query(qs)
+# test()
 
 
 
