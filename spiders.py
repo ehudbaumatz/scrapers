@@ -122,7 +122,7 @@ def test():
     spider=GoogleWebSpider()
     qs = frozenset([f'https://www.google.com/search?q={s} site:https://blog.feedspot.com/' for s in ['Auto Body Styles', 'Commercial Trucks']])
     spider.query(qs)
-# test()
+
 
 
 

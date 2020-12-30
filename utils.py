@@ -2,22 +2,15 @@ import itertools
 import logging
 import os
 import re
-import json
 from collections import defaultdict
-from urllib.parse import urlparse, quote
-
-import pandas as pd
-import csv
 
 # import fire
 import requests
-from lxml import etree, html
-from lxml.cssselect import CSSSelector
+from lxml import etree
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-from tqdm import tqdm
 
 
 # ---------------- HTML
