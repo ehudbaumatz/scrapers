@@ -25,7 +25,7 @@ def batch(urls, proxies=None, hooks=None, max_workers=10):
 
     with FuturesSession(max_workers=max_workers) as session:
         futures = [session.get(url, proxies=proxies, hooks=hooks, timeout=10) for url in urls]
-        for future in as_completed(futures, timeout=10):
+        for future in as_completed(futures):
             response = future.result()
             yield response
 
