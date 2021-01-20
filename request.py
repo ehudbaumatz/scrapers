@@ -13,8 +13,8 @@ def get_proxy_api_key():
 
 
 def proxy_request(url):
-    client = ScraperAPIClient(os.environ.get('PROXY_API_KEY'), headers=HEADERS)
-    rsp = client.get(url=url)
+    client = ScraperAPIClient(os.environ.get('PROXY_API_KEY'))
+    rsp = client.get(url=url, headers=HEADERS)
     return rsp
 
 
