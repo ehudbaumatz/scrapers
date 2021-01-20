@@ -81,7 +81,11 @@ def main(key, input_filepath, output_filepath, max_workers=8):
     # read list of domains
     domains = [line.strip() for line in open(input_filepath)]
     logger.info(f'making final data set from {len(domains)} domains')
-    urls = [f'{CDX_SERVER}?url={domain}&collapse=original&filter=statuscode:200&filter=mimetype:text/html' for domain in domains] #list(it.chain.from_iterable([urls for urls in get_waybacks_urls(domains)]))
+
+    urls = []
+    for domain in domains:
+        urls.extend([f'{CDX_SERVER}?url={domain}/*&collapse=original&filter=statuscode:200&filter=mimetype:text/html&page={i}' for i in range(20)])
+    # urls = [f'{CDX_SERVER}?url={domain}&collapse=original&filter=statuscode:200&filter=mimetype:text/html' for domain in domains] #list(it.chain.from_iterable([urls for urls in get_waybacks_urls(domains)]))
     logger.info(f'starting downloading {len(urls)} domains')
 
     writer = csv.writer(open(output_filepath, 'w'), delimiter='\t')
