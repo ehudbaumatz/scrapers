@@ -1,17 +1,16 @@
 import csv
-import datetime
 import logging
 from pathlib import Path
+from typing import Dict
 
 import click
-import pandas as pd
 import re
 import requests
 from request import batch
 from tqdm import tqdm
 import itertools as it
 
-HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0'}
+HEADERS: Dict[str, str] = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0'}
 CDX_SERVER = 'http://web.archive.org/cdx/search/cdx'
 
 
@@ -28,12 +27,15 @@ def get_page_count(domain):
     return int(response.text.strip())
 
 
-def get_waybacks_urls(domains, proxies, max_pages=500, max_workers=10):
+def get_waybacks_urls(domains, proxies, max_pages=100, max_workers=10):
     urls = [
         f'{CDX_SERVER}?url={domain}/*&collapse=original&filter=statuscode:200&filter=mimetype:text/html&showNumPages=true'
         for domain in domains]
+
+    bar = tqdm(total=len(urls))
     for response in (batch(urls, proxies, max_workers=max_workers)):
         try:
+            bar.update()
             domain = response.url[42:].split('&')[0]
             limit = min(int(response.text.strip()), max_pages)
             urls = [
