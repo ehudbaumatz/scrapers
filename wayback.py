@@ -49,8 +49,10 @@ def download_wayback_urls(urls, proxies, max_workers=8):
     columns = ["urlkey", "timestamp", "original", "mimetype", "statuscode", "digest", "length"]
     field_count = len(columns)
 
+    bar = tqdm(total=len(urls))
     for response in batch(urls, proxies, max_workers=max_workers):
         try:
+            bar.update()
             for line in response.text.split('\n'):
                 fields = line.split(' ')
                 if len(fields) == field_count and len(re.findall(pat, fields[2])) == 0:
@@ -83,11 +85,11 @@ def main(key, input_filepath, output_filepath, max_workers=8):
     logger.info(f'starting downloading {len(urls)} domains')
 
     writer = csv.writer(open(output_filepath, 'w'), delimiter='\t')
-    bar = tqdm(total=len(urls))
+    # bar = tqdm(total=len(urls))
 
     for response in download_wayback_urls(urls, proxies):
         try:
-            bar.update()
+            # bar.update()
             writer.writerow(response)
         except Exception as ex:
             print(ex)
