@@ -66,8 +66,9 @@ def download_wayback_urls(urls, proxies, max_workers=8):
 @click.command()
 @click.argument('input_filepath', type=click.Path(exists=True))
 @click.argument('output_filepath', type=click.Path())
+@click.argument('max_workers', type=click.INT)
 @click.argument('key', envvar='PROXY_API_KEY')
-def main(key, input_filepath, output_filepath):
+def main(key, input_filepath, output_filepath, max_workers):
     """ Runs data processing scripts to turn raw data from (../raw) into
         cleaned data ready to be analyzed (saved in ../processed).
     """
@@ -81,15 +82,18 @@ def main(key, input_filepath, output_filepath):
     # read list of domains
     domains = [line.strip() for line in open(input_filepath)]
     logger.info(f'making final data set from {len(domains)} domains')
-    urls = list(it.chain.from_iterable([urls for urls in get_waybacks_urls(domains, proxies)]))
+    urls = list(it.chain.from_iterable([urls for urls in get_waybacks_urls(domains, proxies, max_workers=max_workers)]))
     logger.info(f'starting downloading {len(urls)} domains')
 
     writer = csv.writer(open(output_filepath, 'w'), delimiter='\t')
     bar = tqdm(total=len(urls))
 
     for response in download_wayback_urls(urls, proxies):
-        bar.update()
-        writer.writerow(response)
+        try:
+            bar.update()
+            writer.writerow(response)
+        except Exception as ex:
+            print(ex)
 
 
 if __name__ == '__main__':
