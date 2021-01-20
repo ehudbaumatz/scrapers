@@ -6,7 +6,7 @@ from typing import Dict
 import click
 import re
 import requests
-from request import batch
+from request import batch, proxy_request
 from tqdm import tqdm
 import itertools as it
 
@@ -37,7 +37,7 @@ def get_waybacks_urls(domains, max_pages=100):
         for u in urls:
             try:
                 bar.update()
-                response = requests.get(u, headers=HEADERS)
+                response = proxy_request(u)
                 domain = u[42:].split('&')[0]
                 limit = min(int(response.text.strip()), max_pages)
                 f.write(f'{domain}\t{limit}\n')
