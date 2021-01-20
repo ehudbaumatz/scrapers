@@ -27,9 +27,9 @@ def get_page_count(domain):
     return int(response.text.strip())
 
 
-def get_waybacks_urls(domains, proxies, max_pages=100, max_workers=10):
+def get_waybacks_urls(domains, proxies, max_pages=100, max_workers=8):
     urls = [
-        f'{CDX_SERVER}?url={domain}/*&collapse=original&filter=statuscode:200&filter=mimetype:text/html&showNumPages=true'
+        f"{CDX_SERVER}?url={domain}/*&collapse=original&filter=statuscode:200&filter=mimetype:text/html&showNumPages=true"
         for domain in domains]
 
     bar = tqdm(total=len(urls))
@@ -46,7 +46,7 @@ def get_waybacks_urls(domains, proxies, max_pages=100, max_workers=10):
             print(ex)
 
 
-def download_wayback_urls(urls, proxies, max_workers=10):
+def download_wayback_urls(urls, proxies, max_workers=8):
     pat = re.compile(':80|/amp/')
     template = 'http://web.archive.org/web/{0}/{1}'
     columns = ["urlkey", "timestamp", "original", "mimetype", "statuscode", "digest", "length"]
@@ -61,7 +61,6 @@ def download_wayback_urls(urls, proxies, max_workers=10):
                     yield [response.url, url, fields[2]]
         except Exception as ex:
             print(ex)
-
 
 
 @click.command()
@@ -87,10 +86,10 @@ def main(key, input_filepath, output_filepath):
 
     writer = csv.writer(open(output_filepath, 'w'), delimiter='\t')
     bar = tqdm(total=len(urls))
-    with open(output_filepath, 'a+') as f:
-        for response in download_wayback_urls(urls, proxies):
-            bar.update()
-            writer.writerow(response)
+
+    for response in download_wayback_urls(urls, proxies):
+        bar.update()
+        writer.writerow(response)
 
 
 if __name__ == '__main__':
@@ -102,6 +101,4 @@ if __name__ == '__main__':
 
     # find .env automagically by walking up directories until it's found, then
     # load up the .env entries as environment variables
-    import sys
-
     main()
