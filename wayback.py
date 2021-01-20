@@ -10,7 +10,7 @@ from request import batch, proxy_request
 from tqdm import tqdm
 import itertools as it
 
-HEADERS: Dict[str, str] = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0'}
+
 CDX_SERVER = 'http://web.archive.org/cdx/search/cdx'
 
 
@@ -19,12 +19,6 @@ def clean(df, threshold=5):
     df = df[df.url.isin(sz[sz < threshold].index)]
     df.drop_duplicates('url', inplace=True)
     return df
-
-
-def get_page_count(domain):
-    url = f'{CDX_SERVER}?url={domain}&collapse=original&filter=statuscode:200&filter=mimetype:text/html&showNumPages=true'
-    response = requests.get(url, headers=HEADERS)
-    return int(response.text.strip())
 
 
 def get_waybacks_urls(domains, max_pages=100):

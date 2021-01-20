@@ -1,8 +1,11 @@
+from typing import Dict
+
 import requests
 import os
 from scraper_api import ScraperAPIClient
 from concurrent.futures import as_completed
 from requests_futures.sessions import FuturesSession
+HEADERS: Dict[str, str] = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0'}
 
 
 def get_proxy_api_key():
@@ -10,7 +13,7 @@ def get_proxy_api_key():
 
 
 def proxy_request(url):
-    client = ScraperAPIClient(os.environ.get('PROXY_API_KEY'))
+    client = ScraperAPIClient(os.environ.get('PROXY_API_KEY'), headers=HEADERS)
     rsp = client.get(url=url)
     return rsp
 
