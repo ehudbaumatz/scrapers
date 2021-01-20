@@ -27,23 +27,26 @@ def get_page_count(domain):
     return int(response.text.strip())
 
 
-def get_waybacks_urls(domains, proxies, max_pages=100, max_workers=8):
+def get_waybacks_urls(domains, max_pages=100):
     urls = [
         f"{CDX_SERVER}?url={domain}/*&collapse=original&filter=statuscode:200&filter=mimetype:text/html&showNumPages=true"
         for domain in domains]
 
     bar = tqdm(total=len(urls))
-    for response in (batch(urls, proxies, max_workers=max_workers)):
-        try:
-            bar.update()
-            domain = response.url[42:].split('&')[0]
-            limit = min(int(response.text.strip()), max_pages)
-            urls = [
-                f'{CDX_SERVER}?url={domain}&collapse=original&filter=statuscode:200&filter=mimetype:text/html&page={i}'
-                for i in range(limit)]
-            yield urls
-        except Exception as ex:
-            print(ex)
+    with open('waybackspages.txt', 'w') as f:
+        for u in urls:
+            try:
+                bar.update()
+                response = requests.get(u, headers=HEADERS)
+                domain = u[42:].split('&')[0]
+                limit = min(int(response.text.strip()), max_pages)
+                f.write(f'{domain}\t{limit}\n')
+                urls = [
+                    f'{CDX_SERVER}?url={domain}&collapse=original&filter=statuscode:200&filter=mimetype:text/html&page={i}'
+                    for i in range(limit)]
+                yield urls
+            except Exception as ex:
+                print(ex)
 
 
 def download_wayback_urls(urls, proxies, max_workers=8):
@@ -66,9 +69,9 @@ def download_wayback_urls(urls, proxies, max_workers=8):
 @click.command()
 @click.argument('input_filepath', type=click.Path(exists=True))
 @click.argument('output_filepath', type=click.Path())
-@click.argument('max_workers', type=click.INT)
+# @click.argument('max_workers', type=click.INT)
 @click.argument('key', envvar='PROXY_API_KEY')
-def main(key, input_filepath, output_filepath, max_workers):
+def main(key, input_filepath, output_filepath, max_workers=8):
     """ Runs data processing scripts to turn raw data from (../raw) into
         cleaned data ready to be analyzed (saved in ../processed).
     """

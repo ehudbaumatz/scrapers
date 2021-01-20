@@ -21,13 +21,16 @@ def get_request(url):
     return rsp
 
 
-def batch(urls, proxies=None, hooks=None, max_workers=10):
+def batch(urls, proxies=None, hooks=None, max_workers=10, timeout=10):
 
     with FuturesSession(max_workers=max_workers) as session:
         futures = [session.get(url, proxies=proxies, hooks=hooks) for url in urls]
         for future in as_completed(futures):
-            response = future.result()
-            yield response
+            try:
+                response = future.result(timeout=timeout)
+                yield response
+            except Exception as ex:
+                print(ex, response.url)
 
 
 
